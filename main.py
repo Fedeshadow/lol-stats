@@ -2,11 +2,17 @@ from classes import *
 
 def version_updater():
     global status 
-    status = Api()
     global version 
+    global champions
+
+    status = Api()
     version = status.lol_version
+    champions = status.champ_dict
+    
 
 version_updater()
 
-#m = Match("EUW1_5915462428")
-#print(m.match_fetch()[0])
+#print(status.champ_dict)
+m = Match("EUW1_5915462428")
+champ = m.match_fetch()[0]
+print(champ,champ.get_name(status))

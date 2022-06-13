@@ -8,6 +8,7 @@ class Api:
     def __init__(self):
         self.lol_version = self.get_lol_version()
         self.key = key
+        self.champ_dict = self.get_champ_list()
 
     def get_lol_version(self):
         return rq.get("https://ddragon.leagueoflegends.com/api/versions.json").json()[0]
@@ -32,9 +33,13 @@ class Api:
                 boots.append(item)
         return boots
 
-    def get_champ_list(self):
-        #TODO: crea
-        pass
+    def get_champ_list(self) -> dict:
+        d = {}
+        raw = rq.get(self.champ_url()).json()
+        for champ in raw["data"]:
+            id, name = raw["data"][champ]["key"],raw["data"][champ]["name"]
+            d[id] = name
+        return d
 
 class Item:
     def __init__(self,_id):
@@ -66,12 +71,15 @@ class Champion:
     
     def __str__(self):
         return str(self.__dict__)
+    
     def __repr__(self):
-        return str(self.__dict__)
-        
+        return str(self.__dict__)    
 
-    def get_name(self,language="en_US"):
-        pass
+    def get_name(self,status:Api):
+        """
+        takes the status as argument and returns the name
+        """
+        return status.champ_dict[str(self.id)]
     
     def add_win(self): #aggiungi una win 
         #TODO: aggiungi implementazione db
@@ -177,8 +185,10 @@ class Match:
         skill_order = maxed.axes[0].to_list()       # extract ordered skills (skillSlot is the firts Axis)
         
         # items
-        starters = None
-        #TODO: da finire
+        df = self.item_tabe()
+        df_p = df[(df["participantId"]==participant_id) & (df["timestamp"]<=40000)]     # starters are generally bought before 40'000
+        starters = df_p["itemId"].to_list()
+        
         return skill_order, starters
 
     # returns a DataFrame with participantId, skillSlot, timestamp
@@ -188,6 +198,17 @@ class Match:
         for frame in frames:
             for event in frame["events"]:
                 if event["type"] == "SKILL_LEVEL_UP":
+                    l.append(event)
+            df = pd.DataFrame(l)
+        return df
+    
+    # returns a DataFrame with itemId, participantId, timestamp
+    def item_tabe(self):
+        l=[]
+        frames = self.timeline["info"]["frames"]
+        for frame in frames:
+            for event in frame["events"]:
+                if event["type"] == "ITEM_PURCHASED":
                     l.append(event)
             df = pd.DataFrame(l)
         return df
