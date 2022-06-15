@@ -13,6 +13,8 @@ def version_updater():
 version_updater()
 
 #print(status.champ_dict)
-m = Match("EUW1_5915462428")
-champ = m.match_fetch()[0]
-print(champ,champ.get_name(status))
+#m = Match("EUW1_5915462428")
+#champ = m.match_fetch()[0]
+#print(champ,champ.get_name(status))
+
+print(status.player_list())

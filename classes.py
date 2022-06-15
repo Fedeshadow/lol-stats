@@ -9,6 +9,17 @@ class Api:
         self.lol_version = self.get_lol_version()
         self.key = key
         self.champ_dict = self.get_champ_list()
+        self.tier = ["PLATINUM","DIAMOND"]
+        self.div = ["I","II","III","IV"]
+        self.region = ["euw1","kr","na1"]
+
+    def request(self,url,use_case):
+        req = rq.get(url)
+        if req.status_code == 429:
+                time.sleep(130)
+                print(f"key limit exeeded in {use_case}, sleeping 130s")
+                req = rq.get(url)
+        return req.json()
 
     def get_lol_version(self):
         return rq.get("https://ddragon.leagueoflegends.com/api/versions.json").json()[0]
@@ -25,6 +36,9 @@ class Api:
     def summ_url(self,language="en_US"):
         return f"https://ddragon.leagueoflegends.com/cdn/{self.lol_version}/data/{language}/summoner.json"
     
+    def player_url(self,region,tier,div):
+        return f"https://{region}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{div}?page=1&api_key={self.key}"
+
     def get_boots_list(self):
         raw = rq.get(self.item_url()).json()
         boots = []
@@ -40,6 +54,22 @@ class Api:
             id, name = raw["data"][champ]["key"],raw["data"][champ]["name"]
             d[id] = name
         return d
+    
+    def player_list(self):
+        for region in self.region:
+            for tier in self.tier:
+                for div in self.div:
+                    url = self.player_url(region, tier, div)
+                    player_list = self.request(url, "player list")
+        pass
+
+class player:
+    pass
+    def __init__(self,summoner_id,region,tier,div):
+        self.id = summoner_id
+    
+    def is_active(self):
+        pass
 
 class Item:
     def __init__(self,_id):
@@ -47,7 +77,7 @@ class Item:
         #self.name = get_name()
     
     def get_name(self,language="en_US"):
-        # prevedere il supporto alle lingue?
+        #TODO: prevedere il supporto alle lingue?
         pass
 
     def isTrinket(self):
@@ -112,24 +142,16 @@ class Match:
     def __init__(self,match_id,server="europe"):
         self.id = match_id
         self.url = f"https://{server}.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={key}"
-        self.data = self.request_data()
+        self.data = self.request(self.url, "match data")
         self.timeline_url = f"https://{server}.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={key}"
-        self.timeline = self.request_timeline()
+        self.timeline = self.request(self.timeline_url, "timeline data")
     
-    def request_data(self):  
-        req = rq.get(self.url)
+    def request(self,url,use_case):
+        req = rq.get(url)
         if req.status_code == 429:
                 time.sleep(130)
-                print("key limit exeeded in match, sleeping 130s")
-                req = rq.get(self.url)
-        return req.json()
-    
-    def request_timeline(self):
-        req = rq.get(self.timeline_url)
-        if req.status_code == 429:
-                time.sleep(130)
-                print("key limit exeeded in match, sleeping 130s")
-                req = rq.get(self.url)
+                print(f"key limit exeeded in {use_case}, sleeping 130s")
+                req = rq.get(url)
         return req.json()
 
     def check_version(self,version):
