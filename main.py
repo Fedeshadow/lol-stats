@@ -12,9 +12,11 @@ def version_updater():
 
 version_updater()
 
-#print(status.champ_dict)
-#m = Match("EUW1_5915462428")
+
+m = Match("KR_5964220985",server="asia")
+#print(m.data)
 #champ = m.match_fetch()[0]
 #print(champ,champ.get_name(status))
 
-print(status.player_list())
+print(version, " | ", m.data["info"]["gameVersion"])
+print(m.check_version(version))

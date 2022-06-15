@@ -4,7 +4,20 @@ from config import key
 import time
 import pandas as pd
 
-class Api:
+class Utils:
+    
+    def request(self,url:str,use_case:str):
+        req = rq.get(url)
+        if req.status_code == 429:
+            time.sleep(130)
+            print(f"key limit exeeded in {use_case}, sleeping 130s")
+            req = rq.get(url)
+        if req.status_code == 403:
+            print(f"key expired")
+            quit()
+        return req.json()
+
+class Api(Utils):
     def __init__(self):
         self.lol_version = self.get_lol_version()
         self.key = key
@@ -12,14 +25,6 @@ class Api:
         self.tier = ["PLATINUM","DIAMOND"]
         self.div = ["I","II","III","IV"]
         self.region = ["euw1","kr","na1"]
-
-    def request(self,url,use_case):
-        req = rq.get(url)
-        if req.status_code == 429:
-                time.sleep(130)
-                print(f"key limit exeeded in {use_case}, sleeping 130s")
-                req = rq.get(url)
-        return req.json()
 
     def get_lol_version(self):
         return rq.get("https://ddragon.leagueoflegends.com/api/versions.json").json()[0]
@@ -36,8 +41,8 @@ class Api:
     def summ_url(self,language="en_US"):
         return f"https://ddragon.leagueoflegends.com/cdn/{self.lol_version}/data/{language}/summoner.json"
     
-    def player_url(self,region,tier,div):
-        return f"https://{region}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{div}?page=1&api_key={self.key}"
+    def player_url(self,region,tier,div, page):
+        return f"https://{region}.api.riotgames.com/lol/league/v4/entries/RANKED_SOLO_5x5/{tier}/{div}?page={page}&api_key={self.key}"
 
     def get_boots_list(self):
         raw = rq.get(self.item_url()).json()
@@ -55,21 +60,50 @@ class Api:
             d[id] = name
         return d
     
-    def player_list(self):
-        for region in self.region:
-            for tier in self.tier:
-                for div in self.div:
-                    url = self.player_url(region, tier, div)
-                    player_list = self.request(url, "player list")
+    #TODO multithreading per region
+    def player_list(self,region="kr"):
+        for tier in self.tier:
+            for div in self.div:
+                for page in range(1,3):
+                    url = self.player_url(region, tier, div, page)
+                player_list = self.request(url, "player list region: {region}")
+
+                for p in player_list:
+                    if not p["inactive"]:
+                        player = Player(p["summonerId"],region)
+                        player.insert()
+                        
+
+
+class Player(Utils):
+    def __init__(self,summoner_id,region):
+        self.region = region
+        self.summoner_id = summoner_id
+        self.account_id, self.puuid = self.get_account_id()
+
+    def get_account_id(self):
+        url = f"https://{self.region}.api.riotgames.com/lol/summoner/v4/summoners/{self.summoner_id}?api_key={key}"
+        data = self.request(url, f"account id region: {self.region}")
+        return data["accountId"], data["puuid"]
+
+    def insert(self):
+        #TODO database implementation
+        print("inserted")
         pass
 
-class player:
-    pass
-    def __init__(self,summoner_id,region,tier,div):
-        self.id = summoner_id
-    
-    def is_active(self):
-        pass
+    def insert_match_list(self):      # 10 games per player
+        if self.region == "euw1":
+            region = "europe"
+        elif self.region == "kr":
+            region = "asia"
+        if self.region == "na1":
+            region = "americas"
+        url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{self.puuid}/ids?type=ranked&start=0&count=10&api_key={key}"
+        data = self.request(url, f"match list from player in region {region}")
+        
+        #TODO implementa db inserisci match
+        
+
 
 class Item:
     def __init__(self,_id):
@@ -130,29 +164,13 @@ class Rune:
     def get_name(self,language="en_US"):
         pass
 
-class Summoner:
-    def __init__(self, _id):
-        self.id = _id
-        #self.name = get_name()
-
-    def get_name(self,language="en_US"):
-        pass    
-
-class Match:
+class Match(Utils):
     def __init__(self,match_id,server="europe"):
         self.id = match_id
         self.url = f"https://{server}.api.riotgames.com/lol/match/v5/matches/{match_id}?api_key={key}"
         self.data = self.request(self.url, "match data")
         self.timeline_url = f"https://{server}.api.riotgames.com/lol/match/v5/matches/{match_id}/timeline?api_key={key}"
         self.timeline = self.request(self.timeline_url, "timeline data")
-    
-    def request(self,url,use_case):
-        req = rq.get(url)
-        if req.status_code == 429:
-                time.sleep(130)
-                print(f"key limit exeeded in {use_case}, sleeping 130s")
-                req = rq.get(url)
-        return req.json()
 
     def check_version(self,version):
         v = "".join([i for i in version.split(".")[:2]])   # exctract current patch
