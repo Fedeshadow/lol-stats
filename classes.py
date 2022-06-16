@@ -1,8 +1,8 @@
-#from numpy import concatenate
 import requests as rq
 from config import key
 import time
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
 
 class Utils:
     
@@ -13,10 +13,14 @@ class Utils:
             print(f"key limit exeeded in {use_case}, sleeping 130s")
             req = rq.get(url)
         if req.status_code == 403:
-            print(f"key expired")
+            print(f"key expired while: {use_case}")
             quit()
         return req.json()
-
+    
+    def threading_region(self, func ,iterable:list):
+        executor = ThreadPoolExecutor()
+        executor.map(func, iterable)
+        
 class Api(Utils):
     def __init__(self):
         self.lol_version = self.get_lol_version()
@@ -60,8 +64,7 @@ class Api(Utils):
             d[id] = name
         return d
     
-    #TODO multithreading per region
-    def player_list(self,region="kr"):
+    def player_list(self,region="kr",*args,**kwargs):
         for tier in self.tier:
             for div in self.div:
                 for page in range(1,3):
@@ -71,8 +74,7 @@ class Api(Utils):
                 for p in player_list:
                     if not p["inactive"]:
                         player = Player(p["summonerId"],region)
-                        player.insert()
-                        
+                        player.insert()                        
 
 
 class Player(Utils):

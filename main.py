@@ -15,8 +15,9 @@ version_updater()
 
 m = Match("KR_5964220985",server="asia")
 #print(m.data)
-#champ = m.match_fetch()[0]
-#print(champ,champ.get_name(status))
+champ = m.match_fetch()[0]
+print(champ,champ.get_name(status))
 
-print(version, " | ", m.data["info"]["gameVersion"])
-print(m.check_version(version))
+
+# multithreading calls per region
+# status.threading_list(status.player_region, status.region)
