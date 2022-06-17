@@ -1,4 +1,5 @@
 from classes import * 
+import os
 
 def version_updater():
     global status 
@@ -12,11 +13,12 @@ def version_updater():
 
 version_updater()
 
+import db_setup     # database setup
 
-m = Match("KR_5964220985",server="asia")
+#m = Match("KR_5964220985",server="asia")
 #print(m.data)
-champ = m.match_fetch()[0]
-print(champ,champ.get_name(status))
+#champ = m.match_fetch()[0]
+#print(champ,champ.get_name(status))
 
 
 # multithreading calls per region
