@@ -1,25 +1,40 @@
 import requests as rq
 from config import key
+from config import db
 import time
 import pandas as pd
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 
 class Utils:
     
     def request(self,url:str,use_case:str):
         req = rq.get(url)
         if req.status_code == 429:
-            time.sleep(130)
+            time.sleep(125)
             print(f"key limit exeeded in {use_case}, sleeping 130s")
             req = rq.get(url)
         if req.status_code == 403:
-            print(f"key expired while: {use_case}")
+            print(f"key expired while {use_case}")
             quit()
         return req.json()
     
-    def threading_region(self, func ,iterable:list):
-        executor = ThreadPoolExecutor()
-        executor.map(func, iterable)
+    def threading_region(self, func ,iterable:list, use_case:str):
+        t1 = time.time()
+        with ThreadPoolExecutor() as executor:
+            executor.map(func, iterable)
+        t2 = time.time()
+        print(f"{use_case} completed in {t2-t1} seconds")
+        #executor = ThreadPoolExecutor()
+        #executor.map(func, iterable)
+    
+    def convert_region(self,reg):
+        if reg == "euw1":
+            region = "europe"
+        elif reg == "kr":
+            region = "asia"
+        elif reg == "na1":
+            region = "americas"
+        return region
         
 class Api(Utils):
     def __init__(self):
@@ -64,17 +79,17 @@ class Api(Utils):
             d[id] = name
         return d
     
-    def player_list(self,region="kr",*args,**kwargs):
+    def player_list(self,region="euw1",*args,**kwargs):
         for tier in self.tier:
             for div in self.div:
                 for page in range(1,3):
                     url = self.player_url(region, tier, div, page)
-                player_list = self.request(url, "player list region: {region}")
+                    player_list = self.request(url, f"player list region: {region}")
 
-                for p in player_list:
-                    if not p["inactive"]:
-                        player = Player(p["summonerId"],region)
-                        player.insert()                        
+                    for p in player_list:
+                        if not p["inactive"]:
+                            player = Player(p["summonerId"],region)
+                            player.insert()                     
 
 
 class Player(Utils):
@@ -89,20 +104,17 @@ class Player(Utils):
         return data["accountId"], data["puuid"]
 
     def insert(self):
-        #TODO database implementation
-        print("inserted")
-        pass
+        try:
+            region = self.convert_region(self.region)
+            db[region].update_one({"_id":"players"}, {"$push":{"values":self.account_id}})
+        except Exception as e:
+            print(e)
 
     def insert_match_list(self):      # 10 games per player
-        if self.region == "euw1":
-            region = "europe"
-        elif self.region == "kr":
-            region = "asia"
-        if self.region == "na1":
-            region = "americas"
+        region = self.convert_region(self.region)
         url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{self.puuid}/ids?type=ranked&start=0&count=10&api_key={key}"
         data = self.request(url, f"match list from player in region {region}")
-        
+        print(data)
         #TODO implementa db inserisci match
         
 

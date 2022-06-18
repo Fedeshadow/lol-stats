@@ -3,6 +3,8 @@ from pymongo import MongoClient
 from classes import Api
 from config import db
 
+# scrivi delle funzioni in maniera tale da poter scegliere come eliminare i dati
+
 def champ_dict(champ_id,champ_name):
     c = {
         "_id": champ_id,
@@ -29,7 +31,7 @@ champ_list = status.get_champ_list()
 db['champions'].drop()
 db['europe'].drop()
 db['asia'].drop()
-db['america'].drop()
+db['americas'].drop()
 
 
 players = {
@@ -46,7 +48,7 @@ matches = {
 for champ in champ_list.keys():
     db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
 db["europe"].insert_many([players,matches])
-db["america"].insert_many([players,matches])
+db["americas"].insert_many([players,matches])
 db["asia"].insert_many([players,matches])
 
 """ Database layout
@@ -59,7 +61,7 @@ mydatabase
 |-- asia
 |   |-- players
 |   |-- matches[ fetched, not-fetched, discarded ]
-|-- america
+|-- americas
 |   |-- players
 |   |-- matches[ fetched, not-fetched, discarded ]
 """
