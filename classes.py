@@ -1,3 +1,4 @@
+from mmap import MADV_AUTOSYNC
 import requests as rq
 from config import key
 from config import db
@@ -78,7 +79,7 @@ class Api(Utils):
             d[id] = name
         return d
     
-    def player_list(self,region="euw1",limited=False,*args,**kwargs):
+    def player_list(self,region="euw1",*args,**kwargs):
         for tier in self.tier:
             for div in self.div:
                 for page in range(1,3):
@@ -90,14 +91,27 @@ class Api(Utils):
                             player = Player(p["summonerId"],region)
                             player.insert()  
 
-    
     def match_list(self,reg="euw1",*args,**kwargs):
         region = self.convert_region(reg)
 
         players = db[region].find_one({"_id":"players"})["values"]
         for p in players:
             player = Player(p[0],reg,p[1],p[2])
-            player.insert_match_list()                        
+            player.insert_match_list()  
+            
+    def matches_fetch(self,reg="euw1",*args,**kwargs):
+        region = self.convert_region(reg)
+
+        matches = db[region].find_one({"_id":"matches"})["not-fetched"]
+        for m in matches:
+            match = Match(m,region)
+            if not match.check_version(self.lol_version):
+                #TODO valuta se mettere una funzione unica
+                db[region].update_one({"_id":"players"}, {"$push":{"discarded":m}})
+                db[region].update_one({"_id":"players"}, {"$pull":{"not-fetched":m}})
+                continue
+            for c in match.match_fetch():
+                c.insert()
 
 
 class Player(Utils):
@@ -175,9 +189,12 @@ class Champion:
     def add_game(self): # +1 ai game
         #TODO: aggiungi implementazione db
         pass
-
     def add_item(self): #aggiungi la lista degli itmes
         #TODO: aggiungi implementazione db
+        pass
+
+    def insert(self):
+        #TODO: da finire, raggruppa gli altri
         pass
 
 class Rune:
@@ -203,6 +220,10 @@ class Match(Utils):
             return False
         return True
     
+    def remove_match(self):
+        #TODO: valuta se scrivere una funzione apposta
+        pass
+
     def add_match(self):
         #TODO: aggiungi implementazione db che aggiunge l'id alla lista 
         # di quelli buoni
@@ -249,7 +270,7 @@ class Match(Utils):
         skill_order = maxed.axes[0].to_list()       # extract ordered skills (skillSlot is the firts Axis)
         
         # items
-        df = self.item_tabe()
+        df = self.item_table()
         df_p = df[(df["participantId"]==participant_id) & (df["timestamp"]<=40000)]     # starters are generally bought before 40'000
         starters = df_p["itemId"].to_list()
         
@@ -267,7 +288,7 @@ class Match(Utils):
         return df
     
     # returns a DataFrame with itemId, participantId, timestamp
-    def item_tabe(self):
+    def item_table(self):
         l=[]
         frames = self.timeline["info"]["frames"]
         for frame in frames:

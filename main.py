@@ -12,9 +12,11 @@ def version_updater():
     
 
 version_updater()
+#db_setup.db_setup()
 
 # multithreading calls per region
 #status.threading_region(status.player_list, status.region, "player list")
+#status.threading_region(status.match_list, status.region, "match list")
 
 """
 playground
@@ -23,8 +25,4 @@ playground
 #print(m.data)
 #champ = m.match_fetch()[0]
 #print(champ,champ.get_name(status))
-
-db_setup.db_setup()
-status.threading_region(status.player_list, status.region, "player list")
-status.threading_region(status.match_list, status.region, "match list")
 
