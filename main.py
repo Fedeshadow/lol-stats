@@ -1,5 +1,5 @@
 from classes import * 
-import os
+import db_setup
 
 def version_updater():
     global status 
@@ -13,10 +13,8 @@ def version_updater():
 
 version_updater()
 
-import db_setup     # database setup
-
 # multithreading calls per region
-#status.threading_region(status.player_list, status.region)
+#status.threading_region(status.player_list, status.region, "player list")
 
 """
 playground
@@ -26,7 +24,7 @@ playground
 #champ = m.match_fetch()[0]
 #print(champ,champ.get_name(status))
 
-try:
-    status.threading_region(status.player_list, status.region, "player list")
-except Exception as e:
-    print(e)
+db_setup.db_setup()
+status.threading_region(status.player_list, status.region, "player list")
+status.threading_region(status.match_list, status.region, "match list")
+

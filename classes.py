@@ -19,13 +19,12 @@ class Utils:
         return req.json()
     
     def threading_region(self, func ,iterable:list, use_case:str):
+        print(f"{use_case} started")
         t1 = time.time()
         with ThreadPoolExecutor() as executor:
             executor.map(func, iterable)
         t2 = time.time()
         print(f"{use_case} completed in {t2-t1} seconds")
-        #executor = ThreadPoolExecutor()
-        #executor.map(func, iterable)
     
     def convert_region(self,reg):
         if reg == "euw1":
@@ -79,7 +78,7 @@ class Api(Utils):
             d[id] = name
         return d
     
-    def player_list(self,region="euw1",*args,**kwargs):
+    def player_list(self,region="euw1",limited=False,*args,**kwargs):
         for tier in self.tier:
             for div in self.div:
                 for page in range(1,3):
@@ -89,14 +88,26 @@ class Api(Utils):
                     for p in player_list:
                         if not p["inactive"]:
                             player = Player(p["summonerId"],region)
-                            player.insert()                     
+                            player.insert()  
+
+    
+    def match_list(self,reg="euw1",*args,**kwargs):
+        region = self.convert_region(reg)
+
+        players = db[region].find_one({"_id":"players"})["values"]
+        for p in players:
+            player = Player(p[0],reg,p[1],p[2])
+            player.insert_match_list()                        
 
 
 class Player(Utils):
-    def __init__(self,summoner_id,region):
+    def __init__(self,summoner_id,region,account_id=None,puuid=None):
         self.region = region
         self.summoner_id = summoner_id
-        self.account_id, self.puuid = self.get_account_id()
+        if account_id is None:
+            self.account_id, self.puuid = self.get_account_id()
+        else:
+            self.account_id, self.puuid = account_id, puuid
 
     def get_account_id(self):
         url = f"https://{self.region}.api.riotgames.com/lol/summoner/v4/summoners/{self.summoner_id}?api_key={key}"
@@ -104,18 +115,17 @@ class Player(Utils):
         return data["accountId"], data["puuid"]
 
     def insert(self):
-        try:
-            region = self.convert_region(self.region)
-            db[region].update_one({"_id":"players"}, {"$push":{"values":self.account_id}})
-        except Exception as e:
-            print(e)
+        region = self.convert_region(self.region)
+
+        # tuple with (summ_id, acc_id, puuid)
+        db[region].update_one({"_id":"players"}, {"$push":{"values":(self.account_id,self.account_id,self.puuid)}})
 
     def insert_match_list(self):      # 10 games per player
         region = self.convert_region(self.region)
         url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{self.puuid}/ids?type=ranked&start=0&count=10&api_key={key}"
         data = self.request(url, f"match list from player in region {region}")
-        print(data)
-        #TODO implementa db inserisci match
+        for m_id in data:
+            db[region].update_one({"_id":"matches"},{"$push":{"not-fetched":m_id}})
         
 
 

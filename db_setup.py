@@ -5,6 +5,13 @@ from config import db
 
 # scrivi delle funzioni in maniera tale da poter scegliere come eliminare i dati
 
+global status
+global champ_list
+
+status = Api()
+champ_list = status.get_champ_list()
+
+
 def champ_dict(champ_id,champ_name):
     c = {
         "_id": champ_id,
@@ -23,34 +30,6 @@ def champ_dict(champ_id,champ_name):
     }
     return c
 
-
-status = Api()
-champ_list = status.get_champ_list()
-
-
-db['champions'].drop()
-db['europe'].drop()
-db['asia'].drop()
-db['americas'].drop()
-
-
-players = {
-    "_id":"players",
-    "values":[]
-}
-matches = {
-    "_id":"matches",
-    "fetched":[],
-    "not-fetched":[],
-    "discarded":[]      # not the right patch
-}
-
-for champ in champ_list.keys():
-    db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
-db["europe"].insert_many([players,matches])
-db["americas"].insert_many([players,matches])
-db["asia"].insert_many([players,matches])
-
 """ Database layout
 mydatabase
 |-- champions
@@ -66,4 +45,51 @@ mydatabase
 |   |-- matches[ fetched, not-fetched, discarded ]
 """
 
-print("db setup done")
+def db_setup():
+    db['champions'].drop()
+    db['europe'].drop()
+    db['asia'].drop()
+    db['americas'].drop()
+
+
+    players = {
+        "_id":"players",
+        "values":[]
+    }
+    matches = {
+        "_id":"matches",
+        "fetched":[],
+        "not-fetched":[],
+        "discarded":[]      # not the right patch
+    }
+
+    for champ in champ_list.keys():
+        db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
+    db["europe"].insert_many([players,matches])
+    db["americas"].insert_many([players,matches])
+    db["asia"].insert_many([players,matches])
+    print("db setup done")
+
+
+def db_setup_no_player():
+    """
+    does not drop player db
+    """
+    db['champions'].drop()
+    db['europe'].delete_one({"_id":"matches"})
+    db['asia'].delete_one({"_id":"matches"})
+    db['americas'].delete_one({"_id":"matches"})
+
+    matches = {
+        "_id":"matches",
+        "fetched":[],
+        "not-fetched":[],
+        "discarded":[]      # not the right patch
+    }
+
+    for champ in champ_list.keys():
+        db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
+    db["europe"].insert_one(matches)
+    db["americas"].insert_one(matches)
+    db["asia"].insert_one(matches)
+    print("db setup without deleting players done")
