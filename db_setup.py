@@ -17,6 +17,7 @@ def champ_dict(champ_id,champ_name):
         "_id": champ_id,
         "name":champ_name,
         "games":0,
+        "wins":0,
         "build":{},
         "role":{"top":0,
                 "mid":0,

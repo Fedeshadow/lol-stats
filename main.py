@@ -26,3 +26,5 @@ playground
 #champ = m.match_fetch()[0]
 #print(champ,champ.get_name(status))
 
+db['champions'].drop()
+

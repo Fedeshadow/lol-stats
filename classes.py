@@ -1,4 +1,3 @@
-from mmap import MADV_AUTOSYNC
 import requests as rq
 from config import key
 from config import db
@@ -107,7 +106,7 @@ class Api(Utils):
             match = Match(m,region)
             if not match.check_version(self.lol_version):
                 #TODO valuta se mettere una funzione unica
-                db[region].update_one({"_id":"players"}, {"$push":{"discarded":m}})
+                db[region].update_one({"_id":"players"}, {"$addToSet":{"discarded":m}})
                 db[region].update_one({"_id":"players"}, {"$pull":{"not-fetched":m}})
                 continue
             for c in match.match_fetch():
@@ -132,14 +131,14 @@ class Player(Utils):
         region = self.convert_region(self.region)
 
         # tuple with (summ_id, acc_id, puuid)
-        db[region].update_one({"_id":"players"}, {"$push":{"values":(self.account_id,self.account_id,self.puuid)}})
+        db[region].update_one({"_id":"players"}, {"$addToSet":{"values":(self.account_id,self.account_id,self.puuid)}})
 
     def insert_match_list(self):      # 10 games per player
         region = self.convert_region(self.region)
         url = f"https://{region}.api.riotgames.com/lol/match/v5/matches/by-puuid/{self.puuid}/ids?type=ranked&start=0&count=10&api_key={key}"
         data = self.request(url, f"match list from player in region {region}")
         for m_id in data:
-            db[region].update_one({"_id":"matches"},{"$push":{"not-fetched":m_id}})
+            db[region].update_one({"_id":"matches"},{"$addToSet":{"not-fetched":m_id}})
         
 
 
@@ -182,13 +181,13 @@ class Champion:
         takes the status as argument and returns the name
         """
         return status.champ_dict[str(self.id)]
-    
-    def add_win(self): #aggiungi una win 
-        #TODO: aggiungi implementazione db
-        pass
-    def add_game(self): # +1 ai game
-        #TODO: aggiungi implementazione db
-        pass
+        
+    def add_game(self): # updates games, roles count and wins
+        db['champions'].update_one({'_id':self.id},{'$inc':{'games':1,f"role.{self.role}":1}})
+        if self.win:
+            db['champions'].update_one({'_id':self.id},{'$inc':{'wins':1}})
+        
+
     def add_item(self): #aggiungi la lista degli itmes
         #TODO: aggiungi implementazione db
         pass
