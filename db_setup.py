@@ -20,10 +20,10 @@ def champ_dict(champ_id,champ_name):
         "wins":0,
         "build":{},
         "role":{"top":0,
-                "mid":0,
-                "jung":0,
-                "supp":0,
-                "adc":0},
+                "middle":0,
+                "jungle":0,
+                "utility":0,
+                "bottom":0},
         "runes":{},
         "summ":{},
         "skill":{},
@@ -94,3 +94,8 @@ def db_setup_no_player():
     db["americas"].insert_one(matches)
     db["asia"].insert_one(matches)
     print("db setup without deleting players done")
+
+def db_setup_only_champ():
+    db['champions'].drop()
+    for champ in champ_list.keys():
+        db["champions"].insert_one(champ_dict(champ, champ_list[champ]))

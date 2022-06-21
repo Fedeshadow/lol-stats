@@ -110,7 +110,9 @@ class Api(Utils):
                 db[region].update_one({"_id":"players"}, {"$pull":{"not-fetched":m}})
                 continue
             for c in match.match_fetch():
-                c.insert()
+                print(c)
+                print(c.add_summs())
+            quit()  # FIXME: still in development
 
 
 class Player(Utils):
@@ -162,7 +164,7 @@ class Champion:
         stat_runes=None ,summ=None, skill_order=None, starters=None):
         
         self.role = role
-        self.id = _id
+        self.id = str(_id)
         self.build = build
         self.runes = runes
         self.summ = summ
@@ -182,8 +184,15 @@ class Champion:
         """
         return status.champ_dict[str(self.id)]
         
+    def repr_list_sorted(self,l:list) -> str:
+        final = ""
+        l.sort()
+        for item in l:
+            final += str(item) + ":"
+        return final.rstrip(':')
+
     def add_game(self): # updates games, roles count and wins
-        db['champions'].update_one({'_id':self.id},{'$inc':{'games':1,f"role.{self.role}":1}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{'games':1,f"role.{self.role.lower()}":1}})
         if self.win:
             db['champions'].update_one({'_id':self.id},{'$inc':{'wins':1}})
         
@@ -192,9 +201,13 @@ class Champion:
         #TODO: aggiungi implementazione db
         pass
 
+    def add_summs(self):
+        return self.repr_list_sorted(self.summ)
+        #TODO check mongodb $setOnInsert or $upsert
+
     def insert(self):
         #TODO: da finire, raggruppa gli altri
-        pass
+        self.add_game()
 
 class Rune:
     def __init__(self, _id):
