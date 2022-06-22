@@ -21,9 +21,11 @@ version_updater()
 """
 playground
 """
-#m = Match("KR_5964220985",server="asia")
+#m = Match("EUW1_5934435453")
 #print(m.data)
-#champ = m.match_fetch()[0]
-#print(champ,champ.get_name(status))
+#champ = m.match_fetch()
+#for c in champ:
+#    print(c,c.get_name(status))
 
+#db_setup.db_setup_only_champ()
 status.matches_fetch()

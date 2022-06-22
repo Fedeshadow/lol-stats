@@ -110,8 +110,9 @@ class Api(Utils):
                 db[region].update_one({"_id":"players"}, {"$pull":{"not-fetched":m}})
                 continue
             for c in match.match_fetch():
-                print(c)
-                print(c.add_summs())
+                print(c) # FIXME
+                c.insert()
+                c.add_summs()
             quit()  # FIXME: still in development
 
 
@@ -167,6 +168,7 @@ class Champion:
         self.id = str(_id)
         self.build = build
         self.runes = runes
+        self.stat_runes = stat_runes
         self.summ = summ
         self.win = win
         self.skill_order = skill_order
@@ -183,7 +185,13 @@ class Champion:
         takes the status as argument and returns the name
         """
         return status.champ_dict[str(self.id)]
-        
+
+    def repr_list(self,l:list) -> str:
+        final = ""
+        for item in l:
+            final += str(item) + ":"
+        return final.rstrip(':')
+
     def repr_list_sorted(self,l:list) -> str:
         final = ""
         l.sort()
@@ -197,17 +205,44 @@ class Champion:
             db['champions'].update_one({'_id':self.id},{'$inc':{'wins':1}})
         
 
-    def add_item(self): #aggiungi la lista degli itmes
-        #TODO: aggiungi implementazione db
+    def add_items(self): #aggiungi la lista degli itmes
+        items = self.build
+        tr = items.pop(-1)
+        #TODO: build = self.repr_list(items)
+
+
+        db["champions"].update_one({f'{self.id}.trinket.{tr}': {'$exists' : False}}, {'$set': {f'{self.id}.trinket.{tr}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'trinket.{tr}':1}})
+    def add_runes():
+        # implementa almeno le stats
         pass
 
+
     def add_summs(self):
-        return self.repr_list_sorted(self.summ)
-        #TODO check mongodb $setOnInsert or $upsert
+        summ = self.repr_list_sorted(self.summ)
+        db["champions"].update_one({f'{self.id}.summ.{summ}': {'$exists' : False}}, {'$set': {f'{self.id}.summ.{summ}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'summ.{summ}':1}})
+
+    def add_skill(self):
+        skill = self.repr_list(self.skill_order)
+        db["champions"].update_one({f'{self.id}.skill.{skill}': {'$exists' : False}}, {'$set': {f'{self.id}.skill.{skill}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'skill.{skill}':1}})
+
+    def add_starter(self):
+        starters = self.repr_list_sorted(self.starters)
+        db["champions"].update_one({f'{self.id}.starters.{starters}': {'$exists' : False}}, {'$set': {f'{self.id}.starters.{starters}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'starters.{starters}':1}})
 
     def insert(self):
         #TODO: da finire, raggruppa gli altri
         self.add_game()
+        self.add_summs()
+        self.add_skill()
+        self.add_starter()
+        self.add_items()
+
+        # aggiungi build e rune
+        
 
 class Rune:
     def __init__(self, _id):
