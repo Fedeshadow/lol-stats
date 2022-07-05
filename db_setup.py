@@ -18,20 +18,14 @@ def champ_dict(champ_id,champ_name):
         "name":champ_name,
         "games":0,
         "wins":0,
-        "build":{
-            "mythic":{},
-            "path":{}
-        },
+        "build":{},
         "trinket":{},
         "role":{"top":0,
                 "middle":0,
                 "jungle":0,
                 "utility":0,
                 "bottom":0},
-        "runes":{
-            "main":{},
-            "path":{}
-        },
+        "runes":{},
         "stat_runes":{},
         "summ":{},
         "skill":{},

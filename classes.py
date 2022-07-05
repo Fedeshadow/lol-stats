@@ -97,6 +97,9 @@ class Api(Utils):
                             player.insert()  
 
     def match_list(self,reg="euw1",*args,**kwargs):
+        """
+        populate db with matchIds
+        """
         region = self.convert_region(reg)
 
         players = db[region].find_one({"_id":"players"})["values"]
@@ -118,7 +121,6 @@ class Api(Utils):
             for c in match.match_fetch():
                 print(c) # FIXME
                 c.insert()
-                c.add_summs()
             quit()  # FIXME: still in development
 
 
@@ -192,8 +194,8 @@ class Champion:
         """
         return status.champ_dict[str(self.id)]
 
-    def isMythic(self,itemId:str):
-        if db["champions"].find_one({"_id":"mythics","values":{"$in":[itemId]}}) is not None:
+    def isMythic(self,itemId):
+        if db["champions"].find_one({"_id":"mythics","values":{"$in":[str(itemId)]}}) is not None:
             return True
         return False
 
@@ -231,11 +233,13 @@ class Champion:
         db["champions"].update_one({f'{self.id}.trinket.{tr}': {'$exists' : False}}, {'$set': {f'{self.id}.trinket.{tr}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'trinket.{tr}':1}})
 
-        db["champions"].update_one({f'{self.id}.build.mythic.{mythic}': {'$exists' : False}}, {'$set': {f'{self.id}.build.mythic.{mythic}': 0}})
-        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.mythic.{mythic}':1}})
+        #TODO: correct items logic
+        
+        db["champions"].update_one({f'{self.id}.build.{mythic}': {'$exists' : False}}, {'$set': {f'{self.id}.build.{mythic}.count': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.count':1}})
 
-        db["champions"].update_one({f'{self.id}.build.path.{all_items}': {'$exists' : False}}, {'$set': {f'{self.id}.build.path.{all_items}': 0}})
-        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.path.{all_items}':1}})
+        db["champions"].update_one({f'{self.id}.build.{mythic}.path.{all_items}': {'$exists' : False}}, {'$set': {f'{self.id}.build.{mythic}.path.{all_items}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{all_items}':1}})
 
         
     
@@ -246,11 +250,11 @@ class Champion:
 
         key_rune = self.runes[0][0]
         all_runes = self.repr_list(self.runes[0]) + "+" + self.repr_list(self.runes[1])
-        db["champions"].update_one({f'{self.id}.runes.main.{key_rune}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.main.{key_rune}': 0}})
-        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.main.{key_rune}':1}})
+        db["champions"].update_one({f'{self.id}.runes.{key_rune}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.{key_rune}.count': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.{key_rune}.count':1}})
 
-        db["champions"].update_one({f'{self.id}.runes.path.{all_runes}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.path.{all_runes}': 0}})
-        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.main.path.{all_runes}':1}})
+        db["champions"].update_one({f'{self.id}.runes.{key_rune}.path.{all_runes}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.{key_rune}.path.{all_runes}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.{key_rune}.path.{all_runes}':1}})
 
 
 
@@ -266,8 +270,9 @@ class Champion:
 
     def add_starter(self):
         starters = self.repr_list_sorted(self.starters)
-        db["champions"].update_one({f'{self.id}.starters.{starters}': {'$exists' : False}}, {'$set': {f'{self.id}.starters.{starters}': 0}})
-        db['champions'].update_one({'_id':self.id},{'$inc':{f'starters.{starters}':1}})
+        if starters != "":
+            db["champions"].update_one({f'{self.id}.starters.{starters}': {'$exists' : False}}, {'$set': {f'{self.id}.starters.{starters}': 0}})
+            db['champions'].update_one({'_id':self.id},{'$inc':{f'starters.{starters}':1}})
 
     def insert(self):
         #TODO: da finire, raggruppa gli altri

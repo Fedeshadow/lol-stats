@@ -21,11 +21,13 @@ version_updater()
 """
 playground
 """
+
 #m = Match("EUW1_5934435453")
 #print(m.data)
 #champ = m.match_fetch()
 #for c in champ:
 #    print(c,c.get_name(status))
 
-#db_setup.db_setup_only_champ()
+#db_setup.db_setup_no_player()
+#status.match_list()
 status.matches_fetch()
