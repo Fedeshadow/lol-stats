@@ -18,14 +18,20 @@ def champ_dict(champ_id,champ_name):
         "name":champ_name,
         "games":0,
         "wins":0,
-        "build":{},
+        "build":{
+            "mythic":{},
+            "path":{}
+        },
         "trinket":{},
         "role":{"top":0,
                 "middle":0,
                 "jungle":0,
                 "utility":0,
                 "bottom":0},
-        "runes":{},
+        "runes":{
+            "main":{},
+            "path":{}
+        },
         "stat_runes":{},
         "summ":{},
         "skill":{},
@@ -65,12 +71,18 @@ def db_setup():
         "not-fetched":[],
         "discarded":[]      # not the right patch
     }
+    items = {
+        "_id":"mythics",
+        "values":[]
+    }
 
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
-    db["europe"].insert_many([players,matches])
+    db["europe"].insert_one(items)
+    db["champions"].insert_many([players,matches])
     db["americas"].insert_many([players,matches])
     db["asia"].insert_many([players,matches])
+    status.get_mythic_list()
     print("db setup done")
 
 
@@ -89,15 +101,27 @@ def db_setup_no_player():
         "not-fetched":[],
         "discarded":[]      # not the right patch
     }
-
+    items = {
+        "_id":"mythics",
+        "values":[]
+    }
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
+    db["champions"].insert_one(items)
     db["europe"].insert_one(matches)
     db["americas"].insert_one(matches)
     db["asia"].insert_one(matches)
+    status.get_mythic_list()
     print("db setup without deleting players done")
 
 def db_setup_only_champ():
+    items = {
+        "_id":"mythics",
+        "values":[]
+    }
     db['champions'].drop()
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
+    db["champions"].insert_one(items)
+    status.get_mythic_list()
+    print("db champion refreshed")

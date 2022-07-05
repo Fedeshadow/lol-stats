@@ -78,6 +78,12 @@ class Api(Utils):
             d[id] = name
         return d
     
+    def get_mythic_list(self) -> bool:
+        item_list = self.request(self.item_url(),"mythic list")
+        for itemId in item_list["data"]:
+            if "rarityMythic" in item_list["data"][itemId]["description"]:
+                db["champions"].update_one({"_id":"mythics"},{"$addToSet":{"values":itemId}})
+
     def player_list(self,region="euw1",*args,**kwargs):
         for tier in self.tier:
             for div in self.div:
@@ -186,6 +192,11 @@ class Champion:
         """
         return status.champ_dict[str(self.id)]
 
+    def isMythic(self,itemId:str):
+        if db["champions"].find_one({"_id":"mythics","values":{"$in":[itemId]}}) is not None:
+            return True
+        return False
+
     def repr_list(self,l:list) -> str:
         final = ""
         for item in l:
@@ -208,14 +219,39 @@ class Champion:
     def add_items(self): #aggiungi la lista degli itmes
         items = self.build
         tr = items.pop(-1)
-        #TODO: build = self.repr_list(items)
-
+        
+        mythic = "0"
+        for i in items:
+            item = str(i)
+            if self.isMythic(item):
+                mythic = item
+                
+        all_items = self.repr_list(items)
 
         db["champions"].update_one({f'{self.id}.trinket.{tr}': {'$exists' : False}}, {'$set': {f'{self.id}.trinket.{tr}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'trinket.{tr}':1}})
-    def add_runes():
-        # implementa almeno le stats
-        pass
+
+        db["champions"].update_one({f'{self.id}.build.mythic.{mythic}': {'$exists' : False}}, {'$set': {f'{self.id}.build.mythic.{mythic}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.mythic.{mythic}':1}})
+
+        db["champions"].update_one({f'{self.id}.build.path.{all_items}': {'$exists' : False}}, {'$set': {f'{self.id}.build.path.{all_items}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.path.{all_items}':1}})
+
+        
+    
+    def add_runes(self):
+        rn = self.repr_list(self.stat_runes)
+        db["champions"].update_one({f'{self.id}.stat_runes.{rn}': {'$exists' : False}}, {'$set': {f'{self.id}.stat_runes.{rn}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'stat_runes.{rn}':1}})
+
+        key_rune = self.runes[0][0]
+        all_runes = self.repr_list(self.runes[0]) + "+" + self.repr_list(self.runes[1])
+        db["champions"].update_one({f'{self.id}.runes.main.{key_rune}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.main.{key_rune}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.main.{key_rune}':1}})
+
+        db["champions"].update_one({f'{self.id}.runes.path.{all_runes}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.path.{all_runes}': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.main.path.{all_runes}':1}})
+
 
 
     def add_summs(self):
@@ -240,6 +276,7 @@ class Champion:
         self.add_skill()
         self.add_starter()
         self.add_items()
+        self.add_runes()
 
         # aggiungi build e rune
         
