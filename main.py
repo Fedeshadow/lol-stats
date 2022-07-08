@@ -28,6 +28,6 @@ playground
 #for c in champ:
 #    print(c,c.get_name(status))
 
-#db_setup.db_setup_no_player()
+#db_setup.db_setup_only_champ()
 #status.match_list()
 status.matches_fetch()

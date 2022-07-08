@@ -111,7 +111,7 @@ class Api(Utils):
         region = self.convert_region(reg)
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
-        for m in matches:
+        for m in matches[:6]:       #FIXME: remove matches range
             match = Match(m,region)
             if not match.check_version(self.lol_version):
                 #TODO valuta se mettere una funzione unica
@@ -121,7 +121,7 @@ class Api(Utils):
             for c in match.match_fetch():
                 print(c) # FIXME
                 c.insert()
-            quit()  # FIXME: still in development
+            #quit()  # FIXME: still in development
 
 
 class Player(Utils):
@@ -217,6 +217,26 @@ class Champion:
         if self.win:
             db['champions'].update_one({'_id':self.id},{'$inc':{'wins':1}})
         
+    def item_logic(self,mythic, items):
+        # check the existence of the mythic
+        db["champions"].update_one({"_id":self.id,f'build.{mythic}': {'$exists' : False}}, {'$set': {f'build.{mythic}.count': 0}})
+        db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.count':1}})
+
+        already_present = db["champions"].find_one({"_id":self.id, f'build.{mythic}.path':{'$exists' : True}})
+
+        if already_present is None:
+            db["champions"].update_one({"_id":self.id}, {'$set': {f'build.{mythic}.path.{items}': 1}})
+            return
+        
+        paths = already_present["build"][mythic]["path"]
+        for path in paths:
+            if items in path:
+                db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{path}':1}})
+            elif path in items:
+                db["champions"].update_one({'_id':self.id,f'build.{mythic}.path.{items}': {'$exists' : False}}, {'$set': {f'build.{mythic}.path.{items}': 0}})
+                db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{items}':1}})
+                #TODO remove the shortest
+
 
     def add_items(self): #aggiungi la lista degli itmes
         items = self.build
@@ -230,10 +250,14 @@ class Champion:
                 
         all_items = self.repr_list(items)
 
-        db["champions"].update_one({f'{self.id}.trinket.{tr}': {'$exists' : False}}, {'$set': {f'{self.id}.trinket.{tr}': 0}})
+        db["champions"].update_one({'_id':self.id,f'.trinket.{tr}': {'$exists' : False}}, {'$set': {f'trinket.{tr}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'trinket.{tr}':1}})
 
-        #TODO: correct items logic
+        #TODO: Item logic: advantage longer builds
+        self.item_logic(mythic, all_items)
+        
+        return  #FIXME
+        
         
         db["champions"].update_one({f'{self.id}.build.{mythic}': {'$exists' : False}}, {'$set': {f'{self.id}.build.{mythic}.count': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.count':1}})
@@ -245,33 +269,33 @@ class Champion:
     
     def add_runes(self):
         rn = self.repr_list(self.stat_runes)
-        db["champions"].update_one({f'{self.id}.stat_runes.{rn}': {'$exists' : False}}, {'$set': {f'{self.id}.stat_runes.{rn}': 0}})
+        db["champions"].update_one({'_id':self.id,f'stat_runes.{rn}': {'$exists' : False}}, {'$set': {f'stat_runes.{rn}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'stat_runes.{rn}':1}})
 
         key_rune = self.runes[0][0]
         all_runes = self.repr_list(self.runes[0]) + "+" + self.repr_list(self.runes[1])
-        db["champions"].update_one({f'{self.id}.runes.{key_rune}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.{key_rune}.count': 0}})
+        db["champions"].update_one({'_id':self.id,f'runes.{key_rune}': {'$exists' : False}}, {'$set': {f'runes.{key_rune}.count': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.{key_rune}.count':1}})
 
-        db["champions"].update_one({f'{self.id}.runes.{key_rune}.path.{all_runes}': {'$exists' : False}}, {'$set': {f'{self.id}.runes.{key_rune}.path.{all_runes}': 0}})
+        db["champions"].update_one({'_id':self.id,f'runes.{key_rune}.path.{all_runes}': {'$exists' : False}}, {'$set': {f'runes.{key_rune}.path.{all_runes}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'runes.{key_rune}.path.{all_runes}':1}})
 
 
 
     def add_summs(self):
         summ = self.repr_list_sorted(self.summ)
-        db["champions"].update_one({f'{self.id}.summ.{summ}': {'$exists' : False}}, {'$set': {f'{self.id}.summ.{summ}': 0}})
+        db["champions"].update_one({'_id':self.id,f'summ.{summ}': {'$exists' : False}}, {'$set': {f'summ.{summ}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'summ.{summ}':1}})
 
     def add_skill(self):
         skill = self.repr_list(self.skill_order)
-        db["champions"].update_one({f'{self.id}.skill.{skill}': {'$exists' : False}}, {'$set': {f'{self.id}.skill.{skill}': 0}})
+        db["champions"].update_one({'_id':self.id,f'skill.{skill}': {'$exists' : False}}, {'$set': {f'skill.{skill}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'skill.{skill}':1}})
 
     def add_starter(self):
         starters = self.repr_list_sorted(self.starters)
         if starters != "":
-            db["champions"].update_one({f'{self.id}.starters.{starters}': {'$exists' : False}}, {'$set': {f'{self.id}.starters.{starters}': 0}})
+            db["champions"].update_one({'_id':self.id,f'starters.{starters}': {'$exists' : False}}, {'$set': {f'starters.{starters}': 0}})
             db['champions'].update_one({'_id':self.id},{'$inc':{f'starters.{starters}':1}})
 
     def insert(self):
@@ -324,7 +348,7 @@ class Match(Utils):
         for p in range(10):
             champ = self.data["info"]["participants"][p]["championId"]
             win = self.data["info"]["participants"][p]["win"]
-            build = [self.data["info"]["participants"][p][f"item{i}"] for i in range(7)]
+            build = [self.data["info"]["participants"][p][f"item{i}"] for i in range(7)]    #TODO take this from the timeline
             stat_perks_raw = self.data["info"]["participants"][p]['perks']["statPerks"]
             stat_perks = [stat_perks_raw[i] for i in stat_perks_raw.keys()]
             role = self.data["info"]["participants"][p]["teamPosition"]
