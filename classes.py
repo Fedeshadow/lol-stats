@@ -230,12 +230,14 @@ class Champion:
         
         paths = already_present["build"][mythic]["path"]
         for path in paths:
-            if items in path:
+            if items in path:   # if the new one is the shorter version of the builds already presents
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{path}':1}})
-            elif path in items:
+
+            elif path in items: # if the new one is longer than a previous build
                 db["champions"].update_one({'_id':self.id,f'build.{mythic}.path.{items}': {'$exists' : False}}, {'$set': {f'build.{mythic}.path.{items}': 0}})
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{items}':1}})
-                #TODO remove the shortest
+                #remove the short build
+                db["champions"].update_one({'_id':self.id},{'$unset':{f'build.{mythic}.path.{path}':""}})
 
 
     def add_items(self): #aggiungi la lista degli itmes
@@ -253,7 +255,7 @@ class Champion:
         db["champions"].update_one({'_id':self.id,f'.trinket.{tr}': {'$exists' : False}}, {'$set': {f'trinket.{tr}': 0}})
         db['champions'].update_one({'_id':self.id},{'$inc':{f'trinket.{tr}':1}})
 
-        #TODO: Item logic: advantage longer builds
+        #Item logic: aggregate items and advantage longer builds
         self.item_logic(mythic, all_items)
         
         return  #FIXME
