@@ -1,9 +1,15 @@
+#from dataclasses import dataclass
+#from unittest import result
+import json
+import csv
 import requests as rq
 from config import key
 from config import db
 import time
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, wait
+
+from db_setup import champ_dict
 
 class Utils:
     
@@ -122,7 +128,48 @@ class Api(Utils):
                 print(c) # FIXME
                 c.insert()
             #quit()  # FIXME: still in development
+    
+    def result_maker(self):      #TODO convert item and runes name  
+        result = {"version":self.lol_version,"data":{}}
+        for c in self.champ_dict:
+            result["data"][c] = {}
+            champ = db["champions"].find_one({"_id":c})
+            
+            #build
+            myth = max(champ["build"], key= lambda x: champ["build"][x]["count"])
+            build = max(champ["build"][myth]["path"], key= lambda x: champ["build"][myth]["path"][x])
+            result["data"][c]["build"]=build
+            #runes
+            main = max(champ["runes"], key= lambda x: champ["runes"][x]["count"])
+            runes = max(champ["runes"][main]["path"], key= lambda x: champ["runes"][main]["path"][x])
+            result["data"][c]["runes"]=runes
+            #role
+            role = max(champ["role"], key= lambda x: champ["role"][x])
+            result["data"][c]["role"] = role
+            #trinket
+            trinket = max(champ["trinket"], key= lambda x: champ["trinket"][x])
+            result["data"][c]["trinket"] = trinket
+            #stat_runes
+            stat_runes = max(champ["stat_runes"], key= lambda x: champ["stat_runes"][x])
+            result["data"][c]["stat_runes"] = stat_runes
+            #summ
+            summ = max(champ["summ"], key= lambda x: champ["summ"][x])
+            result["data"][c]["summ"] = summ
+            #skill
+            skill = max(champ["skill"], key= lambda x: champ["skill"][x])
+            result["data"][c]["skill"] = skill
+            #starters
+            starters = max(champ["starters"], key= lambda x: champ["starters"][x])
+            result["data"][c]["starters"] = starters
+            #winrate
+            result["data"][c]["winrate"] = round(champ["wins"]/champ["games"],2)
 
+            break #FIXME
+        with open("result.json", "w") as f:
+            json.dump(result,f, indent=2)
+        with open("champion.csv","w") as f:
+            for k in champ_dict:
+                pass    #TODO: complete the csv
 
 class Player(Utils):
     def __init__(self,summoner_id,region,account_id=None,puuid=None):

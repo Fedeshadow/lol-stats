@@ -30,4 +30,5 @@ playground
 
 #db_setup.db_setup_only_champ()
 #status.match_list()
-status.matches_fetch()
+#status.matches_fetch()
+status.result_maker()
