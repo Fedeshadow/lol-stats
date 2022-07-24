@@ -9,7 +9,6 @@ import time
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, wait
 
-from db_setup import champ_dict
 
 class Utils:
     
@@ -117,7 +116,7 @@ class Api(Utils):
         region = self.convert_region(reg)
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
-        for m in matches[:6]:       #FIXME: remove matches range
+        for m in matches[6:15]:       #FIXME: remove matches range
             match = Match(m,region)
             if not match.check_version(self.lol_version):
                 #TODO valuta se mettere una funzione unica
@@ -130,46 +129,47 @@ class Api(Utils):
             #quit()  # FIXME: still in development
     
     def result_maker(self):      #TODO convert item and runes name  
-        result = {"version":self.lol_version,"data":{}}
+        result = {"_id":"results","version":self.lol_version,"data":{}}
         for c in self.champ_dict:
-            result["data"][c] = {}
-            champ = db["champions"].find_one({"_id":c})
-            
-            #build
-            myth = max(champ["build"], key= lambda x: champ["build"][x]["count"])
-            build = max(champ["build"][myth]["path"], key= lambda x: champ["build"][myth]["path"][x])
-            result["data"][c]["build"]=build
-            #runes
-            main = max(champ["runes"], key= lambda x: champ["runes"][x]["count"])
-            runes = max(champ["runes"][main]["path"], key= lambda x: champ["runes"][main]["path"][x])
-            result["data"][c]["runes"]=runes
-            #role
-            role = max(champ["role"], key= lambda x: champ["role"][x])
-            result["data"][c]["role"] = role
-            #trinket
-            trinket = max(champ["trinket"], key= lambda x: champ["trinket"][x])
-            result["data"][c]["trinket"] = trinket
-            #stat_runes
-            stat_runes = max(champ["stat_runes"], key= lambda x: champ["stat_runes"][x])
-            result["data"][c]["stat_runes"] = stat_runes
-            #summ
-            summ = max(champ["summ"], key= lambda x: champ["summ"][x])
-            result["data"][c]["summ"] = summ
-            #skill
-            skill = max(champ["skill"], key= lambda x: champ["skill"][x])
-            result["data"][c]["skill"] = skill
-            #starters
-            starters = max(champ["starters"], key= lambda x: champ["starters"][x])
-            result["data"][c]["starters"] = starters
-            #winrate
-            result["data"][c]["winrate"] = round(champ["wins"]/champ["games"],2)
-
-            break #FIXME
-        with open("result.json", "w") as f:
-            json.dump(result,f, indent=2)
+            try:
+                result["data"][c] = {}
+                
+                champ = db["champions"].find_one({"_id":c})
+                #build
+                myth = max(champ["build"], key= lambda x: champ["build"][x]["count"])
+                build = max(champ["build"][myth]["path"], key= lambda x: champ["build"][myth]["path"][x])
+                result["data"][c]["build"]=build
+                #runes
+                main = max(champ["runes"], key= lambda x: champ["runes"][x]["count"])
+                runes = max(champ["runes"][main]["path"], key= lambda x: champ["runes"][main]["path"][x])
+                result["data"][c]["runes"]=runes
+                #role
+                role = max(champ["role"], key= lambda x: champ["role"][x])
+                result["data"][c]["role"] = role
+                #trinket
+                trinket = max(champ["trinket"], key= lambda x: champ["trinket"][x])
+                result["data"][c]["trinket"] = trinket
+                #stat_runes
+                stat_runes = max(champ["stat_runes"], key= lambda x: champ["stat_runes"][x])
+                result["data"][c]["stat_runes"] = stat_runes
+                #summ
+                summ = max(champ["summ"], key= lambda x: champ["summ"][x])
+                result["data"][c]["summ"] = summ
+                #skill
+                skill = max(champ["skill"], key= lambda x: champ["skill"][x])
+                result["data"][c]["skill"] = skill
+                #starters
+                starters = max(champ["starters"], key= lambda x: champ["starters"][x])
+                result["data"][c]["starters"] = starters
+                #winrate
+                result["data"][c]["winrate"] = round(champ["wins"]/champ["games"],4)
+            except ValueError:
+                print(f"no data for {c}")
+        
+        db["champions"].replace_one({"_id":"results"},result,upsert=True)
         with open("champion.csv","w") as f:
-            for k in champ_dict:
-                pass    #TODO: complete the csv
+            for k in self.champ_dict:
+                f.write(self.champ_dict[k]+","+k+"\n")
 
 class Player(Utils):
     def __init__(self,summoner_id,region,account_id=None,puuid=None):
