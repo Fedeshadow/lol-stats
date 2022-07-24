@@ -2,6 +2,7 @@
 #from unittest import result
 import json
 import csv
+from typing_extensions import final
 import requests as rq
 from config import key
 from config import db
@@ -48,6 +49,7 @@ class Api(Utils):
         self.tier = ["PLATINUM","DIAMOND"]
         self.div = ["I","II","III","IV"]
         self.region = ["euw1","kr","na1"]
+        self.languages = ["it_IT","en_US"]
 
     def get_lol_version(self):
         return rq.get("https://ddragon.leagueoflegends.com/api/versions.json").json()[0]
@@ -128,45 +130,78 @@ class Api(Utils):
                 c.insert()
             #quit()  # FIXME: still in development
     
-    def result_maker(self):      #TODO convert item and runes name  
-        result = {"_id":"results","version":self.lol_version,"data":{}}
+    def names_list_converter(self,list_type:str,itr:str,language="en_US"):
+        """Takes the iterable string and return the names"""
+        final_list = []
+        if list_type == "items":
+            url = self.item_url(language)
+            data = self.request(url,"item names list")["data"]
+            for item in itr.split(":"):
+                if item != "0":
+                    n = data[item]["name"]
+                    final_list.append(n)
+            return ",".join(final_list)
+        if list_type == "runes":
+            url = self.rune_url(language)
+            data = self.request(url,"item names list")["data"]
+            for item in itr.split(":"):
+                if item != "0":
+                    n = data[item]["name"]
+                    final_list.append(n)
+            return ",".join(final_list)
+        if list_type == "summ":
+            url = self.summ_url(language)
+            data = self.request(url,"item names list")["data"]
+            for item in itr.split(":"):
+                for s in data:
+                    if data[s]["key"]== item:
+                        final_list.append(data[s]["name"])
+            return ",".join(final_list)
+        if list_type == "skill":
+            new = itr.replace(":",",").replace("1"," q").replace("2"," w").replace("3"," e")
+            return new
+
+
+    def result_maker(self,language="en_US"):      #TODO convert item and runes name  
+        result = {"_id":f"results_{language}","version":self.lol_version,"data":{}}
         for c in self.champ_dict:
             try:
                 result["data"][c] = {}
-                
                 champ = db["champions"].find_one({"_id":c})
                 #build
                 myth = max(champ["build"], key= lambda x: champ["build"][x]["count"])
                 build = max(champ["build"][myth]["path"], key= lambda x: champ["build"][myth]["path"][x])
-                result["data"][c]["build"]=build
+                result["data"][c]["build"]=self.names_list_converter("items",build,language)
                 #runes
                 main = max(champ["runes"], key= lambda x: champ["runes"][x]["count"])
                 runes = max(champ["runes"][main]["path"], key= lambda x: champ["runes"][main]["path"][x])
+                #result["data"][c]["runes"]=self.names_list_converter("runes",runes,language)
                 result["data"][c]["runes"]=runes
                 #role
                 role = max(champ["role"], key= lambda x: champ["role"][x])
                 result["data"][c]["role"] = role
                 #trinket
                 trinket = max(champ["trinket"], key= lambda x: champ["trinket"][x])
-                result["data"][c]["trinket"] = trinket
+                result["data"][c]["trinket"] = self.names_list_converter("items",trinket,language)
                 #stat_runes
                 stat_runes = max(champ["stat_runes"], key= lambda x: champ["stat_runes"][x])
+                ##result["data"][c]["runes"]=self.names_list_converter("runes",runes,language)
                 result["data"][c]["stat_runes"] = stat_runes
                 #summ
                 summ = max(champ["summ"], key= lambda x: champ["summ"][x])
-                result["data"][c]["summ"] = summ
+                result["data"][c]["summ"] = self.names_list_converter("summ",summ,language)
                 #skill
                 skill = max(champ["skill"], key= lambda x: champ["skill"][x])
-                result["data"][c]["skill"] = skill
+                result["data"][c]["skill"] = self.names_list_converter("skill",skill,language)
                 #starters
                 starters = max(champ["starters"], key= lambda x: champ["starters"][x])
-                result["data"][c]["starters"] = starters
+                result["data"][c]["starters"] = self.names_list_converter("items",starters,language)
                 #winrate
                 result["data"][c]["winrate"] = round(champ["wins"]/champ["games"],4)
             except ValueError:
                 print(f"no data for {c}")
         
-        db["champions"].replace_one({"_id":"results"},result,upsert=True)
+        db["champions"].replace_one({"_id":f"results_{language}"},result,upsert=True)
         with open("champion.csv","w") as f:
             for k in self.champ_dict:
                 f.write(self.champ_dict[k]+","+k+"\n")

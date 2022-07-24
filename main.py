@@ -18,7 +18,8 @@ version_updater()
 #status.threading_region(status.player_list, status.region, "player list")
 #status.threading_region(status.match_list, status.region, "match list")
 #status.matches_fetch() #TODO: with multithreading
-#status.result_maker()
+#for l in status.languages:
+#    status.result_maker(l)
 """
 playground
 """
@@ -33,3 +34,6 @@ playground
 #status.match_list()
 #status.matches_fetch()
 #status.result_maker()
+
+for l in status.languages:
+    status.result_maker(l)
