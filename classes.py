@@ -118,16 +118,19 @@ class Api(Utils):
         region = self.convert_region(reg)
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
-        for m in matches[6:15]:       #FIXME: remove matches range
+        for m in matches[:15]:       #FIXME: remove matches range
             match = Match(m,region)
             if not match.check_version(self.lol_version):
                 #TODO valuta se mettere una funzione unica
-                db[region].update_one({"_id":"players"}, {"$addToSet":{"discarded":m}})
-                db[region].update_one({"_id":"players"}, {"$pull":{"not-fetched":m}})
+                db[region].update_one({"_id":"matches"}, {"$addToSet":{"discarded":m}})
+                db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
                 continue
             for c in match.match_fetch():
-                print(c) # FIXME
+                #print(c) # FIXME
                 c.insert()
+            # TODO must be tested
+            db[region].update_one({"_id":"matches"}, {"$addToSet":{"fetched":m}})
+            db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
             #quit()  # FIXME: still in development
     
     def names_list_converter(self,list_type:str,itr:str,language="en_US"):
@@ -141,13 +144,27 @@ class Api(Utils):
                     n = data[item]["name"]
                     final_list.append(n)
             return ",".join(final_list)
-        if list_type == "runes":
+        if list_type == "runes":    # + and - are used to split runes paths later
+            final_list = []
             url = self.rune_url(language)
-            data = self.request(url,"item names list")["data"]
-            for item in itr.split(":"):
-                if item != "0":
-                    n = data[item]["name"]
-                    final_list.append(n)
+            data = self.request(url,"item names list")
+
+            def find_item(item,data):   # helps with all the loops to parse the runes page
+                for rune_path in range(len(data)):
+                    path_name = data[rune_path]["name"]
+                    for layer in range(len(data[rune_path]["slots"])):
+                        for rune in  range(len(data[rune_path]["slots"][layer]["runes"])):
+                            if str(data[rune_path]["slots"][layer]["runes"][rune]["id"]) == item:
+                                name = data[rune_path]["slots"][layer]["runes"][rune]["name"]
+                                return path_name, name
+            for s in itr.split("+"):
+                for item in s.split(":"):
+                    path, name = find_item(item, data)
+                    if path+"-" not in final_list:
+                        final_list.append(path+"-")
+                    final_list.append(name)
+                final_list.append("+")  
+            final_list.pop(-1)                 
             return ",".join(final_list)
         if list_type == "summ":
             url = self.summ_url(language)
@@ -162,7 +179,7 @@ class Api(Utils):
             return new
 
 
-    def result_maker(self,language="en_US"):      #TODO convert item and runes name  
+    def result_maker(self,language="en_US"):      #TODO stat perks name  
         result = {"_id":f"results_{language}","version":self.lol_version,"data":{}}
         for c in self.champ_dict:
             try:
@@ -175,8 +192,7 @@ class Api(Utils):
                 #runes
                 main = max(champ["runes"], key= lambda x: champ["runes"][x]["count"])
                 runes = max(champ["runes"][main]["path"], key= lambda x: champ["runes"][main]["path"][x])
-                #result["data"][c]["runes"]=self.names_list_converter("runes",runes,language)
-                result["data"][c]["runes"]=runes
+                result["data"][c]["runes"]=self.names_list_converter("runes",runes,language)
                 #role
                 role = max(champ["role"], key= lambda x: champ["role"][x])
                 result["data"][c]["role"] = role

@@ -72,8 +72,8 @@ def db_setup():
 
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
-    db["europe"].insert_one(items)
-    db["champions"].insert_many([players,matches])
+    db["champions"].insert_one(items)
+    db["europe"].insert_many([players,matches])
     db["americas"].insert_many([players,matches])
     db["asia"].insert_many([players,matches])
     status.get_mythic_list()
