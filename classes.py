@@ -332,10 +332,13 @@ class Champion:
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{path}':1}})
 
             elif path in items: # if the new one is longer than a previous build
-                db["champions"].update_one({'_id':self.id,f'build.{mythic}.path.{items}': {'$exists' : False}}, {'$set': {f'build.{mythic}.path.{items}': 0}})
+                m = db["champions"].find_one({'_id':self.id})["build"][mythic]["path"][path] #TODO to be tested
+                db["champions"].update_one({'_id':self.id,f'build.{mythic}.path.{items}': {'$exists' : False}}, {'$set': {f'build.{mythic}.path.{items}': m}})
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{items}':1}})
                 #remove the short build
                 db["champions"].update_one({'_id':self.id},{'$unset':{f'build.{mythic}.path.{path}':""}})
+            else:
+                db["champions"].update_one({'_id':self.id,}, {'$set': {f'build.{mythic}.path.{items}': 1}})
 
 
     def add_items(self): #aggiungi la lista degli itmes
