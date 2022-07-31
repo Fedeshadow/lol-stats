@@ -500,7 +500,7 @@ class Match(Utils):
             for event in frame["events"]:
                 if event["type"] == "SKILL_LEVEL_UP":
                     l.append(event)
-            df = pd.DataFrame(l)
+        df = pd.DataFrame(l)
         return df
     
     # returns a DataFrame with itemId, participantId, timestamp
@@ -511,5 +511,5 @@ class Match(Utils):
             for event in frame["events"]:
                 if event["type"] == "ITEM_PURCHASED":
                     l.append(event)
-            df = pd.DataFrame(l)
+        df = pd.DataFrame(l)
         return df
