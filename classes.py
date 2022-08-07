@@ -127,7 +127,7 @@ class Api(Utils):
         region = self.convert_region(reg)
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
-        for m in matches[:15]:       #FIXME: remove matches range
+        for m in matches:
             match = Match(m,region)
             if not match.check_version(self.lol_version):
                 #TODO valuta se mettere una funzione unica
