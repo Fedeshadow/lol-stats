@@ -1,0 +1,4 @@
+requests
+pandas
+pymongo == 4.1.1
+pymongo[srv]

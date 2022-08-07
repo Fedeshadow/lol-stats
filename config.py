@@ -1,4 +1,3 @@
-import pymongo
 from pymongo import MongoClient
 
 key = "your_lol_API_key_goes_here"

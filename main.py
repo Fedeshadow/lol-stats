@@ -12,24 +12,15 @@ def version_updater():
     
 
 version_updater()
-#db_setup.db_setup()
+db_setup.db_setup()
 
 # multithreading calls per region
-#status.threading_region(status.player_list, status.region, "player list")
-#status.threading_region(status.match_list, status.region, "match list")
-#status.threading_region(status.matches_fetch, status.region, "matches analysis")
-#for l in status.languages:
-#    status.result_maker(l)
+status.threading_region(status.player_list, status.region, "player list")
+status.threading_region(status.match_list, status.region, "match list")
+status.threading_region(status.matches_fetch, status.region, "matches analysis")
+for l in status.languages:
+    status.result_maker(l)
+    print(f"{l} results json created")
 """
 playground
 """
-
-#m = Match("EUW1_5934435453")
-#print(m.data)
-#champ = m.match_fetch()
-#for c in champ:
-#    print(c,c.get_name(status))
-
-#db_setup.db_setup_only_champ()
-#status.threading_region(status.match_list, status.region, "match list")
-#status.threading_region(status.matches_fetch, status.region, "matches analysis")

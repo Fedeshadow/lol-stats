@@ -2,7 +2,8 @@
 #from unittest import result
 import json
 import csv
-from typing_extensions import final
+#from typing import final
+#from typing_extensions import final
 import requests as rq
 from config import key
 from config import db
@@ -63,6 +64,14 @@ class Api(Utils):
     def rune_url(self,language="en_US"):
         return f"https://ddragon.leagueoflegends.com/cdn/{self.lol_version}/data/{language}/runesReforged.json"
     
+    def perk_url(self,language="en_US"):
+        # FIXME didn't want to rely on external sources, but perks were too hard to find
+        # every language_url must be added maually (actually does not work for language other than en_US)
+        if language == "it_IT":
+            return "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/it_it/v1/perks.json"
+        if language == "en_US":
+            return "https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perks.json" 
+
     def summ_url(self,language="en_US"):
         return f"https://ddragon.leagueoflegends.com/cdn/{self.lol_version}/data/{language}/summoner.json"
     
@@ -166,6 +175,16 @@ class Api(Utils):
                 final_list.append("+")  
             final_list.pop(-1)                 
             return ",".join(final_list)
+        if list_type == "perks":
+            final_list = []
+            url = self.perk_url(language)
+            data = self.request(url, "perk names list")
+            for perk in itr.split(":"):
+                for p in data:
+                    if str(p["id"]) == perk:
+                        final_list.append(p["name"])
+                        break
+            return ",".join(final_list)
         if list_type == "summ":
             url = self.summ_url(language)
             data = self.request(url,"item names list")["data"]
@@ -201,8 +220,7 @@ class Api(Utils):
                 result["data"][c]["trinket"] = self.names_list_converter("items",trinket,language)
                 #stat_runes
                 stat_runes = max(champ["stat_runes"], key= lambda x: champ["stat_runes"][x])
-                ##result["data"][c]["runes"]=self.names_list_converter("runes",runes,language)
-                result["data"][c]["stat_runes"] = stat_runes
+                result["data"][c]["stat_runes"]=self.names_list_converter("perks",stat_runes,language)
                 #summ
                 summ = max(champ["summ"], key= lambda x: champ["summ"][x])
                 result["data"][c]["summ"] = self.names_list_converter("summ",summ,language)
@@ -327,17 +345,21 @@ class Champion:
             return
         
         paths = already_present["build"][mythic]["path"]
-        for path in paths:
-            if items in path:   # if the new one is the shorter version of the builds already presents
-                db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{path}':1}})
+        for old in paths:
+            #print(old, items)  #FIXME to be tested
+            if items.partition(':0:')[0] in old:   # if the new one is the shorter version of the builds already presents
+                db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{old}':1}})
+                #print("1")   #FIXME
 
-            elif path in items: # if the new one is longer than a previous build
-                m = db["champions"].find_one({'_id':self.id})["build"][mythic]["path"][path] #TODO to be tested
+            elif old.partition(':0:')[0] in items: # if the new one is longer than a previous build
+                m = db["champions"].find_one({'_id':self.id})["build"][mythic]["path"][old] #TODO to be tested
                 db["champions"].update_one({'_id':self.id,f'build.{mythic}.path.{items}': {'$exists' : False}}, {'$set': {f'build.{mythic}.path.{items}': m}})
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{items}':1}})
                 #remove the short build
-                db["champions"].update_one({'_id':self.id},{'$unset':{f'build.{mythic}.path.{path}':""}})
+                db["champions"].update_one({'_id':self.id},{'$unset':{f'build.{mythic}.path.{old}':""}})
+                #print("2")   #FIXME
             else:
+                #print("3")   #FIXME
                 db["champions"].update_one({'_id':self.id,}, {'$set': {f'build.{mythic}.path.{items}': 1}})
 
 
@@ -436,14 +458,6 @@ class Match(Utils):
             return False
         return True
     
-    def remove_match(self):
-        #TODO: valuta se scrivere una funzione apposta
-        pass
-
-    def add_match(self):
-        #TODO: aggiungi implementazione db che aggiunge l'id alla lista 
-        # di quelli buoni
-        pass
 
     # returns the list of Champions
     def match_fetch(self) -> list:   
@@ -451,7 +465,7 @@ class Match(Utils):
         for p in range(10):
             champ = self.data["info"]["participants"][p]["championId"]
             win = self.data["info"]["participants"][p]["win"]
-            build = [self.data["info"]["participants"][p][f"item{i}"] for i in range(7)]    #TODO take this from the timeline
+            build = [self.data["info"]["participants"][p][f"item{i}"] for i in range(7)]    #TODO could it be taken from the timeline?
             stat_perks_raw = self.data["info"]["participants"][p]['perks']["statPerks"]
             stat_perks = [stat_perks_raw[i] for i in stat_perks_raw.keys()]
             role = self.data["info"]["participants"][p]["teamPosition"]
