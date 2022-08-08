@@ -128,19 +128,23 @@ class Api(Utils):
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
         for m in matches:
-            match = Match(m,region)
-            if not match.check_version(self.lol_version):
-                #TODO valuta se mettere una funzione unica
-                db[region].update_one({"_id":"matches"}, {"$addToSet":{"discarded":m}})
+            print(m)
+            try:
+                match = Match(m,region)
+                if not match.check_version(self.lol_version):
+                    #TODO valuta se mettere una funzione unica
+                    db[region].update_one({"_id":"matches"}, {"$addToSet":{"discarded":m}})
+                    db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
+                    continue
+                for c in match.match_fetch():
+                    #print(c) # FIXME
+                    c.insert()
+                # TODO must be tested
+                db[region].update_one({"_id":"matches"}, {"$addToSet":{"fetched":m}})
                 db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
-                continue
-            for c in match.match_fetch():
-                #print(c) # FIXME
-                c.insert()
-            # TODO must be tested
-            db[region].update_one({"_id":"matches"}, {"$addToSet":{"fetched":m}})
-            db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
-            #quit()  # FIXME: still in development
+                #quit()  # FIXME: still in development
+            except Exception as e:
+                print(e)
     
     def names_list_converter(self,list_type:str,itr:str,language="en_US"):
         """Takes the iterable string and return the names"""
