@@ -1,15 +1,12 @@
-#from dataclasses import dataclass
-#from unittest import result
 import json
 import csv
-#from typing import final
-#from typing_extensions import final
 import requests as rq
 from config import key
 from config import db
 import time
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, wait
+import sys, os  # for debug
 
 
 class Utils:
@@ -99,6 +96,11 @@ class Api(Utils):
         for itemId in item_list["data"]:
             if "rarityMythic" in item_list["data"][itemId]["description"]:
                 db["champions"].update_one({"_id":"mythics"},{"$addToSet":{"values":itemId}})
+                db["champions"].update_one({"_id":"complete_items"},{"$addToSet":{"values":itemId}})
+            elif "depth" in item_list["data"][itemId].keys() and item_list["data"][itemId]["depth"]==3:
+                db["champions"].update_one({"_id":"complete_items"},{"$addToSet":{"values":itemId}})
+            elif "Boots" in item_list["data"][itemId]["tags"]:
+                db["champions"].update_one({"_id":"complete_items"},{"$addToSet":{"values":itemId}})
 
     def player_list(self,region="euw1",*args,**kwargs):
         for tier in self.tier:
@@ -128,7 +130,6 @@ class Api(Utils):
 
         matches = db[region].find_one({"_id":"matches"})["not-fetched"]
         for m in matches:
-            print(m)
             try:
                 match = Match(m,region)
                 if not match.check_version(self.lol_version):
@@ -137,14 +138,16 @@ class Api(Utils):
                     db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
                     continue
                 for c in match.match_fetch():
-                    #print(c) # FIXME
+                    
                     c.insert()
                 # TODO must be tested
                 db[region].update_one({"_id":"matches"}, {"$addToSet":{"fetched":m}})
                 db[region].update_one({"_id":"matches"}, {"$pull":{"not-fetched":m}})
                 #quit()  # FIXME: still in development
             except Exception as e:
-                print(e)
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                print(e, exc_type, fname, exc_tb.tb_lineno)
     
     def names_list_converter(self,list_type:str,itr:str,language="en_US"):
         """Takes the iterable string and return the names"""
@@ -290,7 +293,7 @@ class Item:
 
 class Champion:
     def __init__(self, _id,role=None, win=None, build=None, runes=None, \
-        stat_runes=None ,summ=None, skill_order=None, starters=None):
+        stat_runes=None ,summ=None, skill_order=None, starters=None, trinket=None):
         
         self.role = role
         self.id = str(_id)
@@ -301,6 +304,7 @@ class Champion:
         self.win = win
         self.skill_order = skill_order
         self.starters = starters
+        self.trinket = trinket
     
     def __str__(self):
         return str(self.__dict__)
@@ -316,6 +320,11 @@ class Champion:
 
     def isMythic(self,itemId):
         if db["champions"].find_one({"_id":"mythics","values":{"$in":[str(itemId)]}}) is not None:
+            return True
+        return False
+    
+    def isComplete(self,itemId):
+        if db["champions"].find_one({"_id":"complete_items","values":{"$in":[str(itemId)]}}) is not None:
             return True
         return False
 
@@ -350,10 +359,10 @@ class Champion:
         
         paths = already_present["build"][mythic]["path"]
         for old in paths:
-            #print(old, items)  #FIXME to be tested
+            #FIXME to be tested
             if items.partition(':0:')[0] in old:   # if the new one is the shorter version of the builds already presents
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{old}':1}})
-                #print("1")   #FIXME
+                
 
             elif old.partition(':0:')[0] in items: # if the new one is longer than a previous build
                 m = db["champions"].find_one({'_id':self.id})["build"][mythic]["path"][old] #TODO to be tested
@@ -361,22 +370,25 @@ class Champion:
                 db['champions'].update_one({'_id':self.id},{'$inc':{f'build.{mythic}.path.{items}':1}})
                 #remove the short build
                 db["champions"].update_one({'_id':self.id},{'$unset':{f'build.{mythic}.path.{old}':""}})
-                #print("2")   #FIXME
+                
             else:
-                #print("3")   #FIXME
+                
                 db["champions"].update_one({'_id':self.id,}, {'$set': {f'build.{mythic}.path.{items}': 1}})
 
 
     def add_items(self): #aggiungi la lista degli itmes
         items = self.build
-        tr = items.pop(-1)
+        tr = self.trinket
         
+        for i in items:
+            if not self.isComplete(i):
+                items.remove(i)
         mythic = "0"
         for i in items:
             item = str(i)
             if self.isMythic(item):
                 mythic = item
-                
+                break
         all_items = self.repr_list(items)
 
         db["champions"].update_one({'_id':self.id,f'.trinket.{tr}': {'$exists' : False}}, {'$set': {f'trinket.{tr}': 0}})
@@ -385,7 +397,7 @@ class Champion:
         #Item logic: aggregate items and advantage longer builds
         self.item_logic(mythic, all_items)
         
-        return  #FIXME
+        #return  #FIXME
         
         
         db["champions"].update_one({f'{self.id}.build.{mythic}': {'$exists' : False}}, {'$set': {f'{self.id}.build.{mythic}.count': 0}})
@@ -428,7 +440,6 @@ class Champion:
             db['champions'].update_one({'_id':self.id},{'$inc':{f'starters.{starters}':1}})
 
     def insert(self):
-        #TODO: da finire, raggruppa gli altri
         self.add_game()
         self.add_summs()
         self.add_skill()
@@ -436,7 +447,6 @@ class Champion:
         self.add_items()
         self.add_runes()
 
-        # aggiungi build e rune
         
 
 class Rune:
@@ -469,11 +479,16 @@ class Match(Utils):
         for p in range(10):
             champ = self.data["info"]["participants"][p]["championId"]
             win = self.data["info"]["participants"][p]["win"]
-            build = [self.data["info"]["participants"][p][f"item{i}"] for i in range(7)]    #TODO could it be taken from the timeline?
+            tr = self.data["info"]["participants"][p]["item6"]    #TODO could it be taken from the timeline? yes
             stat_perks_raw = self.data["info"]["participants"][p]['perks']["statPerks"]
             stat_perks = [stat_perks_raw[i] for i in stat_perks_raw.keys()]
             role = self.data["info"]["participants"][p]["teamPosition"]
             summ =  [self.data["info"]["participants"][p][f"summoner{i}Id"] for i in range(1,3)]
+
+            # Build
+            p_id = self.data["info"]["participants"][p]["participantId"]
+            build = self.build_from_timeline(p_id)
+            
 
             # Runes reforged 
             perks_raw = self.data["info"]["participants"][p]['perks']["styles"]
@@ -485,15 +500,31 @@ class Match(Utils):
             runes = (prim,sub)
 
             # starters and runes from timeline
-            p_id = self.data["info"]["participants"][p]["participantId"]
+            #p_id = self.data["info"]["participants"][p]["participantId"]
             skill_order, starters = self.timeline_fetch(p_id)
 
             # append final Champion object result
             champ_list.append(Champion(champ,role=role,win=win,build=build,runes=runes,\
-                stat_runes=stat_perks,summ=summ, skill_order=skill_order, starters=starters))
+                stat_runes=stat_perks,summ=summ, skill_order=skill_order, starters=starters, trinket=tr))
 
         return champ_list
     
+    def build_from_timeline(self,participant_id):
+        frames = self.timeline["info"]["frames"]
+        l = []
+        plus = ["ITEM_PURCHASED"]
+        minus = ["ITEM_DESTROYED","ITEM_SOLD","ITEM_UNDO"]
+        for frame in frames:
+                    for event in frame["events"]:
+                        if event["type"] in plus or event["type"] in minus:
+                            l.append(event)
+        df = pd.DataFrame(l)
+
+        sold = df[(df["participantId"]==participant_id) & ((df['type']=="ITEM_DESTROYED") | (df['type']=="ITEM_SOLD") | (df['type']=="ITEM_UNDO"))]
+        build_raw = df[-df.itemId.isin(sold.itemId) & -df.itemId.isin(sold.beforeId) & (df["participantId"]==participant_id) & (df['type']=="ITEM_PURCHASED")]
+        build = build_raw['itemId'].astype('int').astype('str').to_list()
+        return build
+        
     def timeline_fetch(self, participant_id):
         # skill order 
 

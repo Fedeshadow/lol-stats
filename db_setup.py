@@ -69,10 +69,16 @@ def db_setup():
         "_id":"mythics",
         "values":[]
     }
+    complete = {
+        "_id":"complete_items",
+        "values":[]
+    }
+
 
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
     db["champions"].insert_one(items)
+    db["champions"].insert_one(complete)
     db["europe"].insert_many([players,matches])
     db["americas"].insert_many([players,matches])
     db["asia"].insert_many([players,matches])
@@ -99,9 +105,15 @@ def db_setup_no_player():
         "_id":"mythics",
         "values":[]
     }
+    complete = {
+        "_id":"complete_items",
+        "values":[]
+    }
+
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
     db["champions"].insert_one(items)
+    db["champions"].insert_one(complete)
     db["europe"].insert_one(matches)
     db["americas"].insert_one(matches)
     db["asia"].insert_one(matches)
@@ -113,9 +125,15 @@ def db_setup_only_champ():
         "_id":"mythics",
         "values":[]
     }
+    complete = {
+        "_id":"complete_items",
+        "values":[]
+    }
+
     db['champions'].drop()
     for champ in champ_list.keys():
         db["champions"].insert_one(champ_dict(champ, champ_list[champ]))
     db["champions"].insert_one(items)
+    db["champions"].insert_one(complete)
     status.get_mythic_list()
     print("db champion refreshed")
