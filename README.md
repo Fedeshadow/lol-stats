@@ -40,13 +40,13 @@ The current bottleneck is the Development API Key limits as it is not a register
 Therefore, in order to optimize API calls, multithreading per region was implemented.
 
 To add regions modify the *Api._init_* function in  `classes.py`:
-   ```python
+```python
    self.region = ["euw1","kr","na1"]
-	```
+```
 
 Same goes for the tiers parameters and languages supported:
 ```python
    self.tier = ["PLATINUM","DIAMOND"]
    ...
    self.languages = ["it_IT","en_US"]
-	```
+```
