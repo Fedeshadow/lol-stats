@@ -8,7 +8,7 @@ This project handles the data analysis side of the Alexa Skill [League of Legend
 It is designed to be as low-resorces as possible, to run on the Google Cloud Platform Compute Engine free tier.
 Therefore MongoDB (specifically the cloud-hosted MongoDB Atlas) was the optimal choice.
 
-You also need an API development Key to access the Riot Api, in order to collect players' and matches' id.
+You also need an API development Key to access the Riot Api, in order to collect players' and matches' id.\\
 The aim is to analyze 100'000 games from platinum and diamond across Europe, Korea and America.
 
 [Altra immagine]
