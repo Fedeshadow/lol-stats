@@ -3,7 +3,7 @@
 ## About the project
 ![Logo](images/logo.png)
 
-This project handles the data analysis side of the Alexa Skill [League of Legends Build ](https://it.wikipedia.org/wiki/Lingua_italiana "Lingua italiana").
+This project handles the data analysis side of the Alexa Skill League of Legends Build (submitted for verification on the Alexa Skill store).
 
 It is designed to be as low-resorces as possible, to run on the Google Cloud Platform Compute Engine free tier.
 Therefore MongoDB (specifically the cloud-hosted MongoDB Atlas) was the optimal choice.
