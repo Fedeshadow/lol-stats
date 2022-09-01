@@ -11,7 +11,7 @@ Therefore MongoDB (specifically the cloud-hosted MongoDB Atlas) was the optimal 
 You also need an API development Key to access the Riot Api, in order to collect players' and matches' id.
 The aim is to analyze 100'000 games from platinum and diamond across Europe, Korea and America.
 
-[Altra immagine]
+![Example](images/Example.png)
 ###  Installation
 1. Get a riot development API Key at [Riot development portal](https://developer.riotgames.com)
 2. Clone the repo
@@ -28,7 +28,7 @@ The aim is to analyze 100'000 games from platinum and diamond across Europe, Kor
 	mongo_username = "your_username_goes_here"
 	mongo_pswd = "your_pass_goes_here"
 	```
-5. run the script
+5. run the script (on linux)
 	```sh 
 	nohup python3 -u main.py &>> activity.log&
 	```

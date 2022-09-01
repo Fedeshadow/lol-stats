@@ -14,7 +14,7 @@ class Utils:
     def request(self,url:str,use_case:str):
         req = rq.get(url)
         if req.status_code == 429:
-            time.sleep(125)
+            time.sleep(122)
             print(f"key limit exeeded in {use_case}, sleeping 130s")
             req = rq.get(url)
         if req.status_code == 403:
