@@ -1,7 +1,7 @@
 # lol-stats
 
 ## About the project
-![Logo](images/logo1.png)
+![Logo](images/logo.png)
 
 This project handles the data analysis side of the Alexa Skill [League of Legends Build ](https://it.wikipedia.org/wiki/Lingua_italiana "Lingua italiana").
 
