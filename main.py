@@ -12,10 +12,10 @@ def version_updater():
     
 if __name__ == "__main__":
     version_updater()
-    db_setup.db_setup_no_player()
+    db_setup.db_setup()
 
     # multithreading calls per region
-    #status.threading_region(status.player_list, status.region, "player list")
+    status.threading_region(status.player_list, status.region, "player list")
     status.threading_region(status.match_list, status.region, "match list")
     status.threading_region(status.matches_fetch, status.region, "matches analysis")
     for l in status.languages:
